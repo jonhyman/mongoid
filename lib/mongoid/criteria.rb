@@ -56,6 +56,7 @@ module Mongoid #:nodoc:
       :distinct,
       :empty?,
       :execute,
+      :exists?,
       :first,
       :group,
       :last,
@@ -143,16 +144,6 @@ module Mongoid #:nodoc:
     # @return [ Criteria ] The criteria itself.
     def each(&block)
       tap { context.iterate(&block) }
-    end
-
-    # Return true if the criteria has some Document or not.
-    #
-    # @example Are there any documents for the criteria?
-    #   criteria.exists?
-    #
-    # @return [ true, false ] If documents match.
-    def exists?
-      context.count > 0
     end
 
     # Extract a single id from the provided criteria. Could be in an $and

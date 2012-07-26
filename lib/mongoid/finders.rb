@@ -57,7 +57,9 @@ module Mongoid #:nodoc:
     #
     # @param [ Array ] args The conditions.
     def exists?(*args)
-       find(:all, *args).count > 0
+      options = args.extract_options!
+      conditions = options[:conditions] || {}
+      !collection.driver.find(conditions, fields: [:_id]).limit(1).entries.first.nil?
     end
 
     # Find a +Document+ in several different ways.

@@ -151,6 +151,16 @@ module Mongoid # :nodoc:
           build(attributes, options, type, &block).tap { |doc| doc.save }
         end
 
+        # Determine if any documents in this relation exist in the database.
+        #
+        # @example Are there persisted documents?
+        #   person.addresses.exists?
+        #
+        # @return [ true, false ] True is persisted documents exist, false if not.
+        def exists?
+          count > 0
+        end
+
         # Create a new document in the relation. This is essentially the same
         # as doing a #build then #save on the new document. If validation
         # failed on the document an error will get raised.

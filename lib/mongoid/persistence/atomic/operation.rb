@@ -71,9 +71,9 @@ module Mongoid
         # @return [ String, Symbol ] The path to the field.
         #
         # @since 2.1.0
-        def path(field = field)
+        def path(f = field)
           position = document.atomic_position
-          position.blank? ? field : "#{position}.#{field}"
+          position.blank? ? f : "#{position}.#{f}"
         end
 
         # All atomic operations use this with a block to ensure saftey options

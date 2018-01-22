@@ -106,25 +106,26 @@ module Mongoid
       # @param [ Document ] document The document to check.
       # @param [ Symbol, String ] key The field name.
       # @param [ Object, Hash ] value The value or selector.
+      # @param [ Object ] The value of the attribute so that we can memoize it and avoid a call to extract_attribute
       #
       # @return [ Matcher ] The matcher.
       #
       # @since 2.0.0.rc.7
-      def matcher(document, key, value)
+      def matcher(document, key, value, attribute = nil)
         if value.is_a?(Hash)
           matcher = MATCHERS[value.keys.first]
           if matcher
-            matcher.new(extract_attribute(document, key))
+            matcher.new(attribute || extract_attribute(document, key))
           else
-            Default.new(extract_attribute(document, key))
+            Default.new(attribute || extract_attribute(document, key))
           end
         elsif value.regexp?
-          Regexp.new(extract_attribute(document, key))
+          Regexp.new(attribute || extract_attribute(document, key))
         else
           case key.to_s
             when "$or" then Or.new(value, document)
             when "$and" then And.new(value, document)
-            else Default.new(extract_attribute(document, key))
+            else Default.new(attribute || extract_attribute(document, key))
           end
         end
       end

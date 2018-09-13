@@ -1,20 +1,22 @@
+# frozen_string_literal: true
+
 require "spec_helper"
 
 describe Mongoid::Matchable::Nor do
 
-  let(:person) do
+  let(:target) do
     Person.new
   end
 
   let(:matcher) do
-    described_class.new("value", person)
+    described_class.new("value", target)
   end
 
   describe "#_matches?" do
 
     context "when provided a simple expression" do
 
-      context "when any of the values are not equal" do
+      context "when one of the hashes does not match model" do
 
         let(:matches) do
           matcher._matches?(
@@ -22,8 +24,8 @@ describe Mongoid::Matchable::Nor do
           )
         end
 
-        before do
-          person.title = "Queen"
+        let(:target) do
+          Person.new(title: 'Queen')
         end
 
         it "returns true" do
@@ -31,30 +33,85 @@ describe Mongoid::Matchable::Nor do
         end
       end
 
-      context "when none of the values are not equal" do
+      context "when all of the hashes match different fields in model" do
+        let(:matches) do
+          matcher._matches?(
+            [ { age: 10 }, { title: "King" } ]
+          )
+        end
 
-        it "returns true" do
-          expect(matcher._matches?([])).to be true
+        let(:target) do
+          Person.new(title: 'King', age: 10)
+        end
+
+        it "returns false" do
+          expect(matches).to be false
         end
       end
 
+      context "when one of the hashes matches an array field in model" do
+        let(:matches) do
+          matcher._matches?(
+            [ { af: "Sir" }, { af: "King" } ]
+          )
+        end
+
+        let(:target) do
+          ArrayField.new(af: ['King'])
+        end
+
+        it "returns false" do
+          expect(matches).to be false
+        end
+      end
+
+      context "when none of the hashes matches an array field in model" do
+        let(:matches) do
+          matcher._matches?(
+            [ { af: "Sir" }, { af: "King" } ]
+          )
+        end
+
+        let(:target) do
+          ArrayField.new(af: ['Boo'])
+        end
+
+        it "returns true" do
+          expect(matches).to be true
+        end
+      end
+
+      context "when there are no criteria" do
+
+        it "returns false" do
+          expect(matcher._matches?([])).to be false
+        end
+      end
+
+      # $nor with $not is a double negation.
+      # Whatever the argument of $not is is what the overall condition
+      # is looking for.
       context "when the expression is a $not" do
 
         let(:matches) do
           matcher._matches?([ { title: {:$not => /Foobar/ } }])
         end
 
-        context "when the value matches" do
+        context "when the value does not match $not argument" do
+
+          let(:target) do
+            Person.new(title: 'test')
+          end
 
           it "returns false" do
             expect(matches).to be false
           end
         end
 
-        context "when the value does not match" do
+        context "when the value matches $not argument" do
 
-          before do
-            person.title = "Foobar baz"
+          let(:target) do
+            Person.new(title: 'Foobar baz')
           end
 
           it "returns true" do
@@ -66,7 +123,7 @@ describe Mongoid::Matchable::Nor do
 
     context "when provided a complex expression" do
 
-      context "when any of the values are not equal" do
+      context "when none of the model values match criteria values" do
 
         let(:matches) do
           matcher._matches?(
@@ -77,8 +134,8 @@ describe Mongoid::Matchable::Nor do
           )
         end
 
-        before do
-          person.title = "Queen"
+        let(:target) do
+          Person.new(title: 'Queen')
         end
 
         it "returns true" do
@@ -86,7 +143,7 @@ describe Mongoid::Matchable::Nor do
         end
       end
 
-      context "when none of the values are equal" do
+      context "when there is a matching value" do
 
         let(:matches) do
           matcher._matches?(
@@ -97,12 +154,12 @@ describe Mongoid::Matchable::Nor do
           )
         end
 
-        before do
-          person.title = "Sir"
+        let(:target) do
+          Person.new(title: 'Prince')
         end
 
-        it "returns true" do
-          expect(matches).to be true
+        it "returns false" do
+          expect(matches).to be false
         end
       end
 
@@ -117,13 +174,34 @@ describe Mongoid::Matchable::Nor do
           )
         end
 
-        before do
-          person.title = "Queen"
-          person.age = 100
+        context 'and model has different values in all of the fields' do
+          let(:target) do
+            Person.new(title: 'Queen', age: 10)
+          end
+
+          it "returns true" do
+            expect(matches).to be true
+          end
         end
 
-        it "returns false" do
-          expect(matches).to be false
+        context 'and model has identical value in one of the fields' do
+          let(:target) do
+            Person.new(title: 'Queen', age: 23)
+          end
+
+          it "returns true" do
+            expect(matches).to be true
+          end
+        end
+
+        context 'and model has identical values in all of the fields' do
+          let(:target) do
+            Person.new(title: 'Sir', age: 23)
+          end
+
+          it "returns false" do
+            expect(matches).to be false
+          end
         end
       end
     end

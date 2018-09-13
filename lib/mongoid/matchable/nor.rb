@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 # encoding: utf-8
 module Mongoid
   module Matchable
@@ -7,6 +8,9 @@ module Mongoid
 
       # Does the supplied query match the attribute?
       #
+      # Note: an empty array as an argument to $nor is prohibited by
+      # MongoDB server. Mongoid does allow this and returns false in this case.
+      #
       # @example Does this match?
       #   matcher._matches?("$nor" => [ { field => value } ])
       #
@@ -14,19 +18,19 @@ module Mongoid
       #
       # @return [ true, false ] True if matches, false if not.
       #
-      # @since 2.0.0.rc.7
+      # @since 7.1.0
       def _matches?(conditions)
-        conditions.each do |condition|
-          condition.keys.each do |k|
-            key = k
-            value = condition[k]
-            # $nor returns true if all conditions in the array fail, so if one matches, then we failed
-            if document._matches?(key => value)
-              return false
-            end
+        if conditions.length == 0
+          # MongoDB does not allow $nor array to be empty, but
+          # Mongoid accepts an empty array for $or which MongoDB also
+          # prohibits
+          return false
+        end
+        conditions.none? do |condition|
+          condition.all? do |key, value|
+            document._matches?(key => value)
           end
         end
-        return true
       end
     end
   end

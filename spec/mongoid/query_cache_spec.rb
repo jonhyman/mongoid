@@ -123,6 +123,36 @@ describe Mongoid::QueryCache do
     end
   end
 
+  context 'querying all documents after a single document' do
+    before do
+      3.times do
+        Person.create
+      end
+    end
+
+    it 'returns all documents' do
+      expect(Person.all.to_a.count).to eq(3)
+      Person.first
+      expect(Person.all.to_a.count).to eq(3)
+    end
+
+    context 'with conditions specified' do
+      it 'returns all documents' do
+        expect(Person.gt(age: 0).to_a.count).to eq(3)
+        Person.gt(age: 0).first
+        expect(Person.gt(age: 0).to_a.count).to eq(3)
+      end
+    end
+
+    context 'with order specified' do
+      it 'returns all documents' do
+        expect(Person.order_by(name: 1).to_a.count).to eq(3)
+        Person.order_by(name: 1).first
+        expect(Person.order_by(name: 1).to_a.count).to eq(3)
+      end
+    end
+  end
+
   context "when querying in the same collection" do
 
     before do
@@ -411,18 +441,18 @@ describe Mongoid::QueryCache do
     end
   end
 
-  context "when querying a very large collection" do
+  context "when querying collection smaller than the batch size" do
 
     before do
-      123.times { Band.create! }
+      99.times { Band.create! }
     end
 
     it "returns the right number of records" do
-      expect(Band.all.to_a.length).to eq(123)
+      expect(Band.all.to_a.length).to eq(99)
     end
 
     it "#pluck returns the same count of objects" do
-      expect(Band.pluck(:name).length).to eq(123)
+      expect(Band.pluck(:name).length).to eq(99)
     end
 
     context "when loading all the documents" do
@@ -433,12 +463,12 @@ describe Mongoid::QueryCache do
 
       it "caches the complete result of the query" do
         expect_no_queries do
-          expect(Band.all.to_a.length).to eq(123)
+          expect(Band.all.to_a.length).to eq(99)
         end
       end
 
       it "returns the same count of objects when using #pluck" do
-        expect(Band.pluck(:name).length).to eq(123)
+        expect(Band.pluck(:name).length).to eq(99)
       end
     end
   end
@@ -448,6 +478,29 @@ describe Mongoid::QueryCache do
     it "does not cache the query" do
       expect(Mongoid::QueryCache).to receive(:cache_table).never
       Band.collection.indexes.create_one(name: 1)
+    end
+  end
+
+  context 'when the initial query does not exhaust the results' do
+    before do
+      Mongoid::QueryCache.enabled = true
+      10.times { Band.create! }
+
+      Band.batch_size(4).all.any?
+    end
+
+    it 'does not cache the result' do
+      expect(Band.all.map(&:id).size).to eq(10)
+    end
+
+    context 'when a batch size smaller than the result set is specified' do
+      let(:batch_size) do
+        4
+      end
+
+      it 'does not cache the result' do
+        expect(Band.batch_size(batch_size).all.map(&:id).size).to eq(10)
+      end
     end
   end
 end

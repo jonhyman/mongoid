@@ -9,6 +9,7 @@ require "mongoid/matchable/in"
 require "mongoid/matchable/lt"
 require "mongoid/matchable/lte"
 require "mongoid/matchable/ne"
+require "mongoid/matchable/eq"
 require "mongoid/matchable/nin"
 require "mongoid/matchable/or"
 require "mongoid/matchable/nor"
@@ -42,7 +43,8 @@ module Mongoid
       "$nin" => Nin,
       "$or" => Or,
       "$nor" => Nor,
-      "$size" => Size
+      "$size" => Size,
+      "$eq" => Eq
     }.with_indifferent_access.freeze
 
     # Determines if this document has the attributes to match the supplied

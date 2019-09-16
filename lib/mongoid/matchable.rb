@@ -16,6 +16,7 @@ require "mongoid/matchable/nor"
 require "mongoid/matchable/size"
 require "mongoid/matchable/elem_match"
 require "mongoid/matchable/regexp"
+require "mongoid/matchable/not"
 
 module Mongoid
 
@@ -44,6 +45,7 @@ module Mongoid
       "$or" => Or,
       "$nor" => Nor,
       "$size" => Size,
+      "$not" => Not,
       "$eq" => Eq
     }.with_indifferent_access.freeze
 
@@ -110,13 +112,16 @@ module Mongoid
       # @param [ Document ] document The document to check.
       # @param [ Symbol, String ] key The field name.
       # @param [ Object, Hash ] value The value or selector.
-      # @param [ Object ] The value of the attribute so that we can memoize it and avoid a call to extract_attribute
+      # @param [ Object ] attribute The value of the attribute so that we can memoize it and avoid a call to extract_attribute
       #
       # @return [ Matcher ] The matcher.
       #
       # @since 2.0.0.rc.7
       def matcher(document, key, value, attribute = nil)
         if value.is_a?(Hash)
+          if key == :$not || value.keys.first == :$not
+            return Not.new(value, document)
+          end
           matcher = MATCHERS[value.keys.first]
           if matcher
             matcher.new(attribute || extract_attribute(document, key))
